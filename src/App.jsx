@@ -43,29 +43,38 @@ function App() {
       </header>
 
       <main className="min-h-[60vh]">
-        {tab === 'add' && (
-          <AddBreakfast
-            registerCustomBreakfast={breakfast.registerCustomBreakfast}
-            categories={breakfast.categories}
-          />
-        )}
-        {tab === 'edit' && (
-          <EditBreakfast
-            registered={breakfast.registered}
-            updateBreakfast={breakfast.updateBreakfast}
-            removeBreakfast={breakfast.removeBreakfast}
-            categories={breakfast.categories}
-          />
-        )}
-        {tab === 'select' && (
-          <SelectBreakfast
-            registered={breakfast.registered}
-            saveSelection={breakfast.saveSelection}
-            categories={breakfast.categories}
-          />
-        )}
-        {tab === 'history' && (
-          <HistoryCalendar history={breakfast.history} />
+        {breakfast.loading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-amber-800">
+            <span className="text-4xl mb-4 animate-pulse">🍳</span>
+            <p>加载中...</p>
+          </div>
+        ) : (
+          <>
+            {tab === 'add' && (
+              <AddBreakfast
+                registerCustomBreakfast={breakfast.registerCustomBreakfast}
+                categories={breakfast.categories}
+              />
+            )}
+            {tab === 'edit' && (
+              <EditBreakfast
+                registered={breakfast.registered}
+                updateBreakfast={breakfast.updateBreakfast}
+                removeBreakfast={breakfast.removeBreakfast}
+                categories={breakfast.categories}
+              />
+            )}
+            {tab === 'select' && (
+              <SelectBreakfast
+                registered={breakfast.registered}
+                saveSelection={breakfast.saveSelection}
+                categories={breakfast.categories}
+              />
+            )}
+            {tab === 'history' && (
+              <HistoryCalendar history={breakfast.history} />
+            )}
+          </>
         )}
       </main>
     </div>

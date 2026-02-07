@@ -1,26 +1,34 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getRegisteredBreakfasts, saveRegisteredBreakfasts, getHistory, saveHistory, addHistoryRecord } from '../utils/storage'
+import { getRegisteredBreakfasts, saveRegisteredBreakfasts, getHistory, addHistoryRecord } from '../utils/storage'
 import { BREAKFAST_PRESETS, CATEGORIES } from '../data/breakfastPresets'
 
 export function useBreakfast() {
   const [registered, setRegistered] = useState([])
   const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let reg = getRegisteredBreakfasts()
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    let reg = await getRegisteredBreakfasts()
+    const hist = await getHistory()
     if (reg.length === 0) {
       reg = BREAKFAST_PRESETS.map(p => ({ ...p, customName: p.name, inStock: true }))
-      saveRegisteredBreakfasts(reg)
+      await saveRegisteredBreakfasts(reg)
     } else {
       const needsMigration = reg.some(r => r.inStock === undefined)
       reg = reg.map(r => ({ ...r, inStock: r.inStock !== false }))
-      if (needsMigration) saveRegisteredBreakfasts(reg)
+      if (needsMigration) await saveRegisteredBreakfasts(reg)
     }
     setRegistered(reg)
-    setHistory(getHistory())
+    setHistory(hist)
+    setLoading(false)
   }, [])
 
-  const registerCustomBreakfast = useCallback(({ name, emoji, category, options }) => {
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const registerCustomBreakfast = useCallback(async ({ name, emoji, category, options }) => {
     if (!name?.trim()) return
     const id = `custom-${Date.now()}`
     const opts = (options || [])
@@ -41,24 +49,24 @@ export function useBreakfast() {
     }
     const next = [...registered, item]
     setRegistered(next)
-    saveRegisteredBreakfasts(next)
+    await saveRegisteredBreakfasts(next)
   }, [registered])
 
-  const updateBreakfast = useCallback((id, updates) => {
+  const updateBreakfast = useCallback(async (id, updates) => {
     const next = registered.map(r =>
       r.id === id ? { ...r, ...updates } : r
     )
     setRegistered(next)
-    saveRegisteredBreakfasts(next)
+    await saveRegisteredBreakfasts(next)
   }, [registered])
 
-  const removeBreakfast = useCallback((id) => {
+  const removeBreakfast = useCallback(async (id) => {
     const next = registered.filter(r => r.id !== id)
     setRegistered(next)
-    saveRegisteredBreakfasts(next)
+    await saveRegisteredBreakfasts(next)
   }, [registered])
 
-  const saveSelection = useCallback((items) => {
+  const saveSelection = useCallback(async (items) => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const dateStr = tomorrow.toISOString().slice(0, 10)
@@ -68,19 +76,25 @@ export function useBreakfast() {
       items,
       createdAt: new Date().toISOString(),
     }
-    addHistoryRecord(record)
-    setHistory(getHistory())
+    await addHistoryRecord(record)
+    setHistory(await getHistory())
+  }, [])
+
+  const refreshHistory = useCallback(async () => {
+    setHistory(await getHistory())
   }, [])
 
   return {
     registered,
     history,
+    loading,
     presets: BREAKFAST_PRESETS,
     categories: CATEGORIES,
     registerCustomBreakfast,
     updateBreakfast,
     removeBreakfast,
     saveSelection,
-    refreshHistory: () => setHistory(getHistory()),
+    refreshHistory,
+    reload: loadData,
   }
 }
