@@ -6,14 +6,17 @@ export function useBreakfast() {
   const [registered, setRegistered] = useState([])
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saveError, setSaveError] = useState(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    setSaveError(null)
     let reg = await getRegisteredBreakfasts()
     const hist = await getHistory()
     if (reg.length === 0) {
       reg = BREAKFAST_PRESETS.map(p => ({ ...p, customName: p.name, inStock: true }))
-      await saveRegisteredBreakfasts(reg)
+      const ok = await saveRegisteredBreakfasts(reg)
+      if (!ok) setSaveError('数据保存失败，请在 Supabase 中运行 supabase/schema.sql 创建表')
     } else {
       const needsMigration = reg.some(r => r.inStock === undefined)
       reg = reg.map(r => ({ ...r, inStock: r.inStock !== false }))
@@ -30,6 +33,7 @@ export function useBreakfast() {
 
   const registerCustomBreakfast = useCallback(async ({ name, emoji, category, options }) => {
     if (!name?.trim()) return
+    setSaveError(null)
     const id = `custom-${Date.now()}`
     const opts = (options || [])
       .filter(o => o.label?.trim() && o.values?.some(v => v?.trim()))
@@ -49,21 +53,26 @@ export function useBreakfast() {
     }
     const next = [...registered, item]
     setRegistered(next)
-    await saveRegisteredBreakfasts(next)
+    const ok = await saveRegisteredBreakfasts(next)
+    if (!ok) setSaveError('保存失败，请检查 Supabase 配置或运行 supabase/schema.sql')
   }, [registered])
 
   const updateBreakfast = useCallback(async (id, updates) => {
+    setSaveError(null)
     const next = registered.map(r =>
       r.id === id ? { ...r, ...updates } : r
     )
     setRegistered(next)
-    await saveRegisteredBreakfasts(next)
+    const ok = await saveRegisteredBreakfasts(next)
+    if (!ok) setSaveError('保存失败，请检查 Supabase 配置')
   }, [registered])
 
   const removeBreakfast = useCallback(async (id) => {
+    setSaveError(null)
     const next = registered.filter(r => r.id !== id)
     setRegistered(next)
-    await saveRegisteredBreakfasts(next)
+    const ok = await saveRegisteredBreakfasts(next)
+    if (!ok) setSaveError('保存失败，请检查 Supabase 配置')
   }, [registered])
 
   const saveSelection = useCallback(async (items) => {
@@ -88,6 +97,8 @@ export function useBreakfast() {
     registered,
     history,
     loading,
+    saveError,
+    clearSaveError: () => setSaveError(null),
     presets: BREAKFAST_PRESETS,
     categories: CATEGORIES,
     registerCustomBreakfast,

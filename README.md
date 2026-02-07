@@ -44,6 +44,15 @@ VITE_SUPABASE_ANON_KEY=你的anon-key
 
 **注意**：未配置 Supabase 时，应用自动使用 localStorage（仅本地存储，无多端同步）。
 
+### 数据刷新后消失？
+
+若使用 Supabase 且添加的数据在刷新后消失，请按以下步骤排查：
+
+1. **确认已创建表**：在 Supabase Dashboard > **SQL Editor** 中运行 `supabase/schema.sql` 中的完整 SQL
+2. **检查浏览器控制台**：打开开发者工具 (F12) > Console，查看是否有 Supabase 相关报错
+3. **检查 .env**：确认 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 正确且重启了 dev server
+4. **查看错误提示**：若保存失败，页面顶部会显示红色错误提示
+
 ## 运行
 
 ```bash

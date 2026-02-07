@@ -19,6 +19,12 @@ function App() {
   return (
     <div className="min-h-screen max-w-lg mx-auto bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100">
       <header className="sticky top-0 z-10 bg-gradient-to-r from-amber-400 via-orange-300 to-amber-400 shadow-md">
+        {breakfast.saveError && (
+          <div className="mx-4 mt-2 p-2 rounded-lg bg-red-100 text-red-800 text-sm flex items-center justify-between">
+            <span>{breakfast.saveError}</span>
+            <button onClick={breakfast.clearSaveError} className="text-red-600 font-bold">×</button>
+          </div>
+        )}
         <div className="px-4 py-4">
           <h1 className="text-xl font-bold text-amber-900 flex items-center justify-center gap-2">
             <span>🍳</span> 大宝早餐选择

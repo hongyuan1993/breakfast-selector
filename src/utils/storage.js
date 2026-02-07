@@ -21,15 +21,15 @@ async function supabaseGet(key) {
 }
 
 async function supabaseSet(key, value) {
-  if (!supabase) return false
+  if (!supabase) return { ok: true }
   const { error } = await supabase
     .from('app_store')
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   if (error) {
-    console.error('Supabase set error:', error)
-    return false
+    console.error('Supabase set error:', key, error)
+    return { ok: false, error: error.message }
   }
-  return true
+  return { ok: true }
 }
 
 // 同步接口 - localStorage 回退
@@ -70,8 +70,8 @@ export async function getRegisteredBreakfasts() {
 
 export async function saveRegisteredBreakfasts(items) {
   if (supabase) {
-    const ok = await supabaseSet(STORAGE_KEYS.REGISTERED, items)
-    return ok
+    const result = await supabaseSet(STORAGE_KEYS.REGISTERED, items)
+    return result.ok
   }
   localSetRegistered(items)
   return true
@@ -87,7 +87,8 @@ export async function getHistory() {
 
 export async function saveHistory(records) {
   if (supabase) {
-    return await supabaseSet(STORAGE_KEYS.HISTORY, records)
+    const result = await supabaseSet(STORAGE_KEYS.HISTORY, records)
+    return result.ok
   }
   localSetHistory(records)
   return true
