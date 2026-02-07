@@ -100,3 +100,9 @@ export async function addHistoryRecord(record) {
   filtered.unshift(record)
   return await saveHistory(filtered)
 }
+
+export async function removeHistoryRecord(dateStr) {
+  const history = await getHistory()
+  const filtered = history.filter(r => r.date !== dateStr)
+  return await saveHistory(filtered)
+}

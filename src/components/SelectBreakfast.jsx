@@ -1,5 +1,12 @@
 import { useState, useMemo } from 'react'
 
+const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+const SERVING_TIME_OPTIONS = [
+  '6:00-6:30', '6:30-7:00', '7:00-7:30', '7:30-8:00', '8:00-8:30', '8:30-9:00',
+  '9:00-9:30', '9:30-10:00', '10:00-10:30', '10:30-11:00', '11:00-11:30', '11:30-12:00',
+]
+
 // 生成明日到一周内的日期选项
 function getDateOptions() {
   const today = new Date()
@@ -10,7 +17,7 @@ function getDateOptions() {
     options.push({
       value: d.toISOString().slice(0, 10),
       label: i === 1 ? '明日' : `+${i}天`,
-      display: `${d.getMonth() + 1}/${d.getDate()}`,
+      display: `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAYS[d.getDay()]})`,
     })
   }
   return options
@@ -19,7 +26,7 @@ function getDateOptions() {
 function SelectBreakfast({ registered, saveSelection, categories }) {
   const dateOptions = useMemo(() => getDateOptions(), [])
   const [selectedDate, setSelectedDate] = useState(dateOptions[0]?.value ?? '')
-  const [servingTime, setServingTime] = useState('')
+  const [servingTime, setServingTime] = useState('10:00-10:30')
   const [selected, setSelected] = useState({}) // { id: { optionKey: value } }
   const [animatingId, setAnimatingId] = useState(null)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -77,7 +84,7 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
     const items = buildPreviewItems()
     saveSelection(items, selectedDate, servingTime)
     setSelected({})
-    setServingTime('')
+    setServingTime('10:00-10:30')
     setShowConfirm(false)
     setShowSuccess(true)
     setTimeout(() => setShowSuccess(false), 2500)
@@ -116,20 +123,22 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
                   : 'bg-white/80 text-amber-800 border border-amber-200/60 hover:bg-amber-100'
               }`}
             >
-              {opt.label} ({opt.display})
+              {opt.display}
             </button>
           ))}
         </div>
       </div>
       <div className="mb-4">
         <label className="block text-xs text-amber-800 mb-2">早餐提供时间</label>
-        <input
-          type="text"
+        <select
           value={servingTime}
           onChange={e => setServingTime(e.target.value)}
-          placeholder="例如：7:00-8:30"
-          className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-amber-50/50 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
-        />
+          className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-amber-50/50 text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-300"
+        >
+          {SERVING_TIME_OPTIONS.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
       </div>
       {registered.length === 0 ? (
         <div className="text-center py-12 text-amber-800/70">
@@ -211,7 +220,7 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
                 onClick={handleOpenConfirm}
                 className="px-8 py-3 rounded-full bg-warm-gradient text-amber-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
               >
-                💾 保存至 {dateOptions.find(o => o.value === selectedDate)?.label ?? selectedDate}
+                💾 保存至 {dateOptions.find(o => o.value === selectedDate)?.display ?? selectedDate}
               </button>
             </div>
           )}
@@ -233,7 +242,7 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
                 <div className="space-y-3 mb-5">
                   <div className="text-sm text-amber-800">
                     <span className="font-medium">日期：</span>
-                    {dateOptions.find(o => o.value === selectedDate)?.label} ({selectedDate})
+                    {dateOptions.find(o => o.value === selectedDate)?.display ?? selectedDate}
                   </div>
                   {servingTime.trim() && (
                     <div className="text-sm text-amber-800">

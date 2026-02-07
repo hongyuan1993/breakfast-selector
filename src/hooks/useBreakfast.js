@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getRegisteredBreakfasts, saveRegisteredBreakfasts, getHistory, addHistoryRecord } from '../utils/storage'
+import { getRegisteredBreakfasts, saveRegisteredBreakfasts, getHistory, addHistoryRecord, removeHistoryRecord } from '../utils/storage'
 import { BREAKFAST_PRESETS, CATEGORIES } from '../data/breakfastPresets'
 
 export function useBreakfast() {
@@ -91,6 +91,23 @@ export function useBreakfast() {
     setHistory(await getHistory())
   }, [])
 
+  const cancelOrder = useCallback(async (dateStr) => {
+    await removeHistoryRecord(dateStr)
+    setHistory(await getHistory())
+  }, [])
+
+  const updateOrder = useCallback(async (dateStr, items, servingTime) => {
+    const record = {
+      id: Date.now(),
+      date: dateStr,
+      items,
+      servingTime: servingTime || '',
+      createdAt: new Date().toISOString(),
+    }
+    await addHistoryRecord(record)
+    setHistory(await getHistory())
+  }, [])
+
   return {
     registered,
     history,
@@ -104,6 +121,8 @@ export function useBreakfast() {
     removeBreakfast,
     saveSelection,
     refreshHistory,
+    cancelOrder,
+    updateOrder,
     reload: loadData,
   }
 }

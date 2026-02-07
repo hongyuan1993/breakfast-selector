@@ -9,7 +9,7 @@ const TABS = [
   { id: 'select', label: '选择', icon: '🍽️' },
   { id: 'add', label: '添加', icon: '➕' },
   { id: 'edit', label: '修改', icon: '✏️' },
-  { id: 'history', label: '历史', icon: '📅' },
+  { id: 'history', label: '订单', icon: '📋' },
 ]
 
 function App() {
@@ -78,7 +78,13 @@ function App() {
               />
             )}
             {tab === 'history' && (
-              <HistoryCalendar history={breakfast.history} />
+              <HistoryCalendar
+                history={breakfast.history}
+                registered={breakfast.registered}
+                categories={breakfast.categories}
+                cancelOrder={breakfast.cancelOrder}
+                updateOrder={breakfast.updateOrder}
+              />
             )}
           </>
         )}
