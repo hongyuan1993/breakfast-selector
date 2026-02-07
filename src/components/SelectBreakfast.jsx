@@ -27,7 +27,7 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
   const dateOptions = useMemo(() => getDateOptions(), [])
   const [selectedDate, setSelectedDate] = useState(dateOptions[0]?.value ?? '')
   const [servingTime, setServingTime] = useState('10:00-10:30')
-  const [selected, setSelected] = useState({}) // { id: { optionKey: value } }
+  const [selected, setSelected] = useState({}) // { id: { optionKey: value[], _remark?: string } }
   const [animatingId, setAnimatingId] = useState(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -48,10 +48,23 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
     })
   }
 
-  const setOption = (id, optionKey, value) => {
+  const toggleOption = (id, optionKey, value) => {
+    setSelected(prev => {
+      const current = prev[id]?.[optionKey]
+      const arr = Array.isArray(current) ? [...current] : (current ? [current] : [])
+      const idx = arr.indexOf(value)
+      const nextArr = idx >= 0 ? arr.filter((_, i) => i !== idx) : [...arr, value]
+      return {
+        ...prev,
+        [id]: { ...(prev[id] || {}), [optionKey]: nextArr }
+      }
+    })
+  }
+
+  const setItemRemark = (id, remark) => {
     setSelected(prev => ({
       ...prev,
-      [id]: { ...(prev[id] || {}), [optionKey]: value }
+      [id]: { ...(prev[id] || {}), _remark: remark }
     }))
   }
 
@@ -63,15 +76,19 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
       })
       .map(([id, opts]) => {
         const item = registered.find(r => r.id === id)
-        const optsDisplay = Object.entries(opts).map(([key, val]) => {
-          const optDef = (item?.options || []).find(o => o.key === key)
-          return { label: optDef?.label || key, value: val }
-        })
+        const optsDisplay = Object.entries(opts)
+          .filter(([key]) => key !== '_remark')
+          .map(([key, val]) => {
+            const optDef = (item?.options || []).find(o => o.key === key)
+            const displayVal = Array.isArray(val) ? val.filter(Boolean).join(', ') : (val || '')
+            return { label: optDef?.label || key, value: displayVal }
+          }).filter(o => o.value)
         return {
           id,
           name: item?.customName || item?.name,
           emoji: item?.emoji,
-          options: optsDisplay
+          options: optsDisplay,
+          remark: (opts._remark || '').trim()
         }
       })
   }
@@ -185,26 +202,38 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
                             {isSelected && <span className="text-amber-600 text-xs mt-1">✓ 已选</span>}
                           </button>
                         </div>
-                        {isSelected && item.options?.length > 0 && (
+                        {isSelected && (
                           <div className="rounded-xl bg-white/60 p-2 space-y-2 border border-amber-200/50">
-                            {item.options.map(opt => (
+                            {item.options?.length > 0 && item.options.map(opt => (
                               <div key={opt.key} className="flex flex-wrap gap-1">
                                 <span className="text-xs text-amber-800 w-full">{opt.label}:</span>
-                                {opt.values.map(v => (
-                                  <button
-                                    key={v}
-                                    onClick={() => setOption(item.id, opt.key, v)}
-                                    className={`text-xs px-2 py-1 rounded-full transition-colors ${
-                                      selected[item.id]?.[opt.key] === v
-                                        ? 'bg-amber-400 text-amber-900'
-                                        : 'bg-amber-100/80 text-amber-800 hover:bg-amber-200'
-                                    }`}
-                                  >
-                                    {v}
-                                  </button>
-                                ))}
+                                {opt.values.map(v => {
+                                  const vals = selected[item.id]?.[opt.key]
+                                  const isOptSelected = Array.isArray(vals) ? vals.includes(v) : vals === v
+                                  return (
+                                    <button
+                                      key={v}
+                                      onClick={() => toggleOption(item.id, opt.key, v)}
+                                      className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                                        isOptSelected ? 'bg-amber-400 text-amber-900' : 'bg-amber-100/80 text-amber-800 hover:bg-amber-200'
+                                      }`}
+                                    >
+                                      {v}
+                                    </button>
+                                  )
+                                })}
                               </div>
                             ))}
+                            <div>
+                              <span className="text-xs text-amber-800 block mb-1">备注</span>
+                              <input
+                                type="text"
+                                value={selected[item.id]?._remark || ''}
+                                onChange={e => setItemRemark(item.id, e.target.value)}
+                                placeholder="可选，针对此项的备注"
+                                className="w-full px-2 py-1.5 text-sm rounded-lg border border-amber-200/60 bg-white/80 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -264,8 +293,11 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
                           <span className="font-medium text-amber-900">{item.name}</span>
                           {item.options?.length > 0 && (
                             <span className="text-xs text-amber-700 block">
-                              {item.options.map(o => `${o.label}: ${o.value}`).join(', ')}
+                              {item.options.map(o => `${o.label}: ${o.value}`).join('；')}
                             </span>
+                          )}
+                          {item.remark && (
+                            <span className="text-xs text-amber-600 block mt-0.5">备注：{item.remark}</span>
                           )}
                         </div>
                       </div>

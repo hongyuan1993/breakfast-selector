@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
 
+function getTomorrowStr() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
 function HistoryCalendar({ history, registered, categories, cancelOrder, updateOrder }) {
   const [viewDate, setViewDate] = useState(new Date().toISOString().slice(0, 7)) // YYYY-MM
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(getTomorrowStr)
   const [editMode, setEditMode] = useState(false)
   const [editItems, setEditItems] = useState([])
 
@@ -51,7 +57,14 @@ function HistoryCalendar({ history, registered, categories, cancelOrder, updateO
 
   const enterEditMode = () => {
     if (!selectedRecord) return
-    setEditItems(selectedRecord.items?.map(it => ({ ...it })) ?? [])
+    setEditItems((selectedRecord.items || []).map(it => ({
+      ...it,
+      remark: it.remark || '',
+      options: (it.options || []).map(o => ({
+        label: o.label,
+        value: Array.isArray(o.value) ? o.value : (o.value ? String(o.value).split(/[,，]/).map(s => s.trim()).filter(Boolean) : [])
+      }))
+    })))
     setEditMode(true)
   }
 
@@ -66,29 +79,46 @@ function HistoryCalendar({ history, registered, categories, cancelOrder, updateO
   const addItemToOrder = (regItem) => {
     const opts = (regItem.options || []).map(o => ({
       label: o.label,
-      value: o.values?.[0] ?? ''
+      value: []
     }))
     setEditItems(prev => [...prev, {
       id: regItem.id,
       name: regItem.customName || regItem.name,
       emoji: regItem.emoji,
-      options: opts
+      options: opts,
+      remark: ''
     }])
   }
 
-  const updateItemOption = (index, optLabel, value) => {
+  const updateItemRemark = (index, remark) => {
+    setEditItems(prev => prev.map((it, i) => i === index ? { ...it, remark } : it))
+  }
+
+  const toggleItemOption = (index, optLabel, value) => {
     setEditItems(prev => prev.map((it, i) => {
       if (i !== index) return it
-      const opts = (it.options || []).map(o =>
-        o.label === optLabel ? { ...o, value } : o
-      )
+      const opts = (it.options || []).map(o => {
+        if (o.label !== optLabel) return o
+        const vals = Array.isArray(o.value) ? [...o.value] : (o.value ? String(o.value).split(/[,，]/).map(s => s.trim()).filter(Boolean) : [])
+        const idx = vals.indexOf(value)
+        const nextVals = idx >= 0 ? vals.filter((_, j) => j !== idx) : [...vals, value]
+        return { ...o, value: nextVals }
+      })
       return { ...it, options: opts }
     }))
   }
 
   const handleSaveOrder = async () => {
     if (!selectedRecord) return
-    await updateOrder(selectedRecord.date, editItems, selectedRecord.servingTime)
+    const itemsForSave = editItems.map(it => ({
+      ...it,
+      remark: (it.remark || '').trim(),
+      options: (it.options || []).map(o => ({
+        label: o.label,
+        value: Array.isArray(o.value) ? o.value.join(', ') : (o.value || '')
+      })).filter(o => o.value)
+    }))
+    await updateOrder(selectedRecord.date, itemsForSave, selectedRecord.servingTime)
     setEditMode(false)
   }
 
@@ -189,23 +219,35 @@ function HistoryCalendar({ history, registered, categories, cancelOrder, updateO
                                 {regItem.options.map(opt => (
                                   <div key={opt.key} className="flex items-center gap-1">
                                     <span className="text-xs text-amber-700">{opt.label}:</span>
-                                    {opt.values.map(v => (
-                                      <button
-                                        key={v}
-                                        onClick={() => updateItemOption(i, opt.label, v)}
-                                        className={`text-xs px-2 py-0.5 rounded-full ${
-                                          (item.options?.find(o => o.label === opt.label)?.value) === v
-                                            ? 'bg-amber-400 text-amber-900'
-                                            : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'
-                                        }`}
-                                      >
-                                        {v}
-                                      </button>
-                                    ))}
+                                    {opt.values.map(v => {
+                                      const optVal = item.options?.find(o => o.label === opt.label)?.value
+                                      const vals = Array.isArray(optVal) ? optVal : (optVal ? String(optVal).split(/[,，]/).map(s => s.trim()) : [])
+                                      const isOptSelected = vals.includes(v)
+                                      return (
+                                        <button
+                                          key={v}
+                                          onClick={() => toggleItemOption(i, opt.label, v)}
+                                          className={`text-xs px-2 py-0.5 rounded-full ${
+                                            isOptSelected ? 'bg-amber-400 text-amber-900' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'
+                                          }`}
+                                        >
+                                          {v}
+                                        </button>
+                                      )
+                                    })}
                                   </div>
                                 ))}
                               </div>
                             )}
+                            <div className="mt-1">
+                              <input
+                                type="text"
+                                value={item.remark || ''}
+                                onChange={e => updateItemRemark(i, e.target.value)}
+                                placeholder="备注（可选）"
+                                className="w-full px-2 py-1 text-xs rounded-lg border border-amber-200/60 bg-white/80 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              />
+                            </div>
                           </div>
                           <button
                             onClick={() => removeItemFromOrder(i)}
@@ -266,6 +308,9 @@ function HistoryCalendar({ history, registered, categories, cancelOrder, updateO
                               : Object.entries(opts).map(([k, v]) => `${k}: ${v}`).join(', ')
                             return <span className="text-xs text-amber-700 block">{text}</span>
                           })()}
+                          {item.remark && (
+                            <span className="text-xs text-amber-600 block mt-0.5">备注：{item.remark}</span>
+                          )}
                         </div>
                       </div>
                     ))}
