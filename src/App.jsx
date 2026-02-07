@@ -7,7 +7,7 @@ import HistoryCalendar from './components/HistoryCalendar'
 
 const TABS = [
   { id: 'select', label: '选择', icon: '🍽️' },
-  { id: 'add', label: '登陆', icon: '➕' },
+  { id: 'add', label: '添加', icon: '➕' },
   { id: 'edit', label: '修改', icon: '✏️' },
   { id: 'history', label: '历史', icon: '📅' },
 ]

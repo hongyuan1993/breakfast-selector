@@ -73,7 +73,7 @@ function EditBreakfast({ registered, updateBreakfast, removeBreakfast, categorie
         <div className="text-center py-12 text-amber-800/70">
           <span className="text-4xl block mb-2">📝</span>
           <p>暂无可修改的早餐</p>
-          <p className="text-xs mt-2">请先在「登陆早餐」中添加</p>
+          <p className="text-xs mt-2">请先在「添加早餐」中添加</p>
         </div>
       ) : (
         <div className="space-y-6">

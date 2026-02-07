@@ -20,7 +20,7 @@ function AddBreakfast({ registerCustomBreakfast, categories }) {
   return (
     <div className="p-4 pb-24">
       <h2 className="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
-        <span>➕</span> 登陆早餐
+        <span>➕</span> 添加早餐
       </h2>
 
       {/* 添加新种类 */}
