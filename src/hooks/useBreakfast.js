@@ -75,14 +75,12 @@ export function useBreakfast() {
     if (!ok) setSaveError('保存失败，请检查 Supabase 配置')
   }, [registered])
 
-  const saveSelection = useCallback(async (items) => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const dateStr = tomorrow.toISOString().slice(0, 10)
+  const saveSelection = useCallback(async (items, dateStr, servingTime = '') => {
     const record = {
       id: Date.now(),
       date: dateStr,
       items,
+      servingTime: servingTime?.trim() || '',
       createdAt: new Date().toISOString(),
     }
     await addHistoryRecord(record)

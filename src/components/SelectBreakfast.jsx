@@ -1,8 +1,29 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+
+// 生成明日到一周内的日期选项
+function getDateOptions() {
+  const today = new Date()
+  const options = []
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today)
+    d.setDate(d.getDate() + i)
+    options.push({
+      value: d.toISOString().slice(0, 10),
+      label: i === 1 ? '明日' : `+${i}天`,
+      display: `${d.getMonth() + 1}/${d.getDate()}`,
+    })
+  }
+  return options
+}
 
 function SelectBreakfast({ registered, saveSelection, categories }) {
+  const dateOptions = useMemo(() => getDateOptions(), [])
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0]?.value ?? '')
+  const [servingTime, setServingTime] = useState('')
   const [selected, setSelected] = useState({}) // { id: { optionKey: value } }
   const [animatingId, setAnimatingId] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const toggleSelect = (id) => {
     const item = registered.find(r => r.id === id)
@@ -27,8 +48,8 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
     }))
   }
 
-  const handleSave = () => {
-    const items = Object.entries(selected)
+  const buildPreviewItems = () => {
+    return Object.entries(selected)
       .filter(([id]) => {
         const item = registered.find(r => r.id === id)
         return item && item.inStock !== false
@@ -46,8 +67,24 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
           options: optsDisplay
         }
       })
-    saveSelection(items)
+  }
+
+  const handleOpenConfirm = () => {
+    setShowConfirm(true)
+  }
+
+  const handleConfirmSave = () => {
+    const items = buildPreviewItems()
+    saveSelection(items, selectedDate, servingTime)
     setSelected({})
+    setServingTime('')
+    setShowConfirm(false)
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 2500)
+  }
+
+  const handleCancelConfirm = () => {
+    setShowConfirm(false)
   }
 
   const byCategory = {}
@@ -63,8 +100,37 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
         <span>🍽️</span> 选择早餐
       </h2>
       <p className="text-amber-800/80 text-sm mb-4">
-        多选明天的早餐，带选项的可展开选择
+        选择日期并多选早餐，带选项的可展开选择
       </p>
+      <div className="mb-4">
+        <label className="block text-xs text-amber-800 mb-2">保存到日期</label>
+        <div className="flex flex-wrap gap-2">
+          {dateOptions.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setSelectedDate(opt.value)}
+              className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                selectedDate === opt.value
+                  ? 'bg-amber-400 text-amber-900 shadow-md'
+                  : 'bg-white/80 text-amber-800 border border-amber-200/60 hover:bg-amber-100'
+              }`}
+            >
+              {opt.label} ({opt.display})
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mb-4">
+        <label className="block text-xs text-amber-800 mb-2">早餐提供时间</label>
+        <input
+          type="text"
+          value={servingTime}
+          onChange={e => setServingTime(e.target.value)}
+          placeholder="例如：7:00-8:30"
+          className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-amber-50/50 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
+        />
+      </div>
       {registered.length === 0 ? (
         <div className="text-center py-12 text-amber-800/70">
           <span className="text-4xl block mb-2">🥣</span>
@@ -142,11 +208,76 @@ function SelectBreakfast({ registered, saveSelection, categories }) {
           {Object.keys(selected).length > 0 && (
             <div className="fixed bottom-20 left-0 right-0 p-4 flex justify-center">
               <button
-                onClick={handleSave}
+                onClick={handleOpenConfirm}
                 className="px-8 py-3 rounded-full bg-warm-gradient text-amber-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
               >
-                💾 保存明日选择
+                💾 保存至 {dateOptions.find(o => o.value === selectedDate)?.label ?? selectedDate}
               </button>
+            </div>
+          )}
+          {showSuccess && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-6 text-center">
+                <span className="text-4xl block mb-3">✅</span>
+                <p className="text-lg font-bold text-amber-900 mb-1">已成功添加！</p>
+                <p className="text-amber-800">敬请期待！</p>
+              </div>
+            </div>
+          )}
+          {showConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="w-full max-w-md rounded-2xl bg-white shadow-xl p-5 max-h-[85vh] overflow-y-auto">
+                <h3 className="font-bold text-amber-900 mb-4 flex items-center gap-2">
+                  <span>✅</span> 确认保存
+                </h3>
+                <div className="space-y-3 mb-5">
+                  <div className="text-sm text-amber-800">
+                    <span className="font-medium">日期：</span>
+                    {dateOptions.find(o => o.value === selectedDate)?.label} ({selectedDate})
+                  </div>
+                  {servingTime.trim() && (
+                    <div className="text-sm text-amber-800">
+                      <span className="font-medium">提供时间：</span>
+                      {servingTime.trim()}
+                    </div>
+                  )}
+                  <div className="text-sm text-amber-800">
+                    <span className="font-medium">已选早餐：</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {buildPreviewItems().map((item, i) => (
+                      <div
+                        key={i}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-100/80 border border-amber-200/50"
+                      >
+                        <span className="text-lg">{item.emoji}</span>
+                        <div>
+                          <span className="font-medium text-amber-900">{item.name}</span>
+                          {item.options?.length > 0 && (
+                            <span className="text-xs text-amber-700 block">
+                              {item.options.map(o => `${o.label}: ${o.value}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCancelConfirm}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-200/80 text-amber-800 font-medium hover:bg-amber-300 transition-colors"
+                  >
+                    返回
+                  </button>
+                  <button
+                    onClick={handleConfirmSave}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-400 text-amber-900 font-bold hover:bg-amber-500 transition-colors"
+                  >
+                    确认
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>

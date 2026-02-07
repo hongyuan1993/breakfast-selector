@@ -106,6 +106,12 @@ function HistoryCalendar({ history }) {
               <h3 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
                 <span>🍳</span> {selectedRecord.date} 早餐
               </h3>
+              {selectedRecord.servingTime && (
+                <div className="text-sm text-amber-800 mb-3">
+                  <span className="font-medium">提供时间：</span>
+                  {selectedRecord.servingTime}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 {selectedRecord.items?.map((item, i) => (
                   <div
