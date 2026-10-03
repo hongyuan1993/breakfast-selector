@@ -8,14 +8,8 @@ CREATE TABLE IF NOT EXISTS app_store (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 启用行级安全（RLS）
+-- 启用行级安全（RLS），不建任何策略：只有服务端的 service_role（绕过 RLS）能访问。
+-- 浏览器经由 Vercel Function /api/store 读写，不再直连 Supabase。
 ALTER TABLE app_store ENABLE ROW LEVEL SECURITY;
-
--- 删除已有策略（若存在），避免重复运行报错
 DROP POLICY IF EXISTS "Allow all access" ON app_store;
-
--- 允许所有人读写（无登录，家庭共享数据）
-CREATE POLICY "Allow all access" ON app_store
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
+REVOKE ALL ON TABLE app_store FROM anon, authenticated;

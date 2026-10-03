@@ -6,7 +6,7 @@
 
 - React 18 + Vite 5
 - Tailwind CSS 3
-- Supabase（后端存储，多端同步）或 localStorage（无配置时回退）
+- Vercel Functions（`api/`）+ Supabase（服务端用 service_role 访问，浏览器不持有任何 Supabase key）
 
 ## 功能
 
@@ -15,43 +15,27 @@
 - **选择早餐**：多选明日早餐，支持选项（如煎鸡蛋选全熟/半熟）
 - **历史记录**：以日历形式查看已保存的早餐记录
 
-## 多端同步（Supabase）
+## 数据存储（Vercel Functions + Supabase）
 
-配置 Supabase 后，所有设备访问同一网址会共享同一份数据。
+浏览器只调用同源的 `/api/store`（`api/store.js`），由服务端用 service_role 读写 Supabase 的 `app_store` 表；
+只允许 `breakfasts` / `history` 两个 key，并校验格式与大小。浏览器端不再有任何 Supabase URL / key。
 
-### 1. 创建 Supabase 项目
+### 1. 创建数据库表
 
-1. 访问 [supabase.com](https://supabase.com) 注册/登录
-2. 点击 **New Project** 创建项目
-3. 在 **Project Settings > API** 中获取 `URL` 和 `anon public` key
+在 Supabase Dashboard > **SQL Editor** 中运行 `supabase/schema.sql`（开启 RLS、不加策略、收回 anon 权限）。
 
-### 2. 创建数据库表
+### 2. 在 Vercel 配置环境变量（不要提交 .env）
 
-在 Supabase Dashboard > **SQL Editor** 中运行 `supabase/schema.sql` 中的 SQL。
+| 变量 | 说明 |
+|---|---|
+| `SUPABASE_URL` | Supabase 项目 URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role 密钥（仅服务端；**绝不能**以 `VITE_` 开头） |
+| `APP_PASSWORD`（可选） | 设置后需输入口令才能读写数据（会话 Cookie 1 年有效） |
+| `APP_SESSION_SECRET`（设置口令时必填） | 会话 Cookie 加密密钥，随机字符串 ≥ 16 位 |
 
-### 3. 配置环境变量
+### 3. 本地开发
 
-复制 `.env.example` 为 `.env`，填入：
-
-```
-VITE_SUPABASE_URL=https://你的项目.supabase.co
-VITE_SUPABASE_ANON_KEY=你的anon-key
-```
-
-### 4. 使用
-
-配置完成后，重新构建并部署。任何设备访问同一网址会共享早餐数据和历史记录。新设备打开或刷新页面即可获取最新数据。
-
-**注意**：未配置 Supabase 时，应用自动使用 localStorage（仅本地存储，无多端同步）。
-
-### 数据刷新后消失？
-
-若使用 Supabase 且添加的数据在刷新后消失，请按以下步骤排查：
-
-1. **确认已创建表**：在 Supabase Dashboard > **SQL Editor** 中运行 `supabase/schema.sql` 中的完整 SQL
-2. **检查浏览器控制台**：打开开发者工具 (F12) > Console，查看是否有 Supabase 相关报错
-3. **检查 .env**：确认 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 正确且重启了 dev server
-4. **查看错误提示**：若保存失败，页面顶部会显示红色错误提示
+`/api/*` 是 Vercel Function，本地请用 `vercel dev`（`npm run dev` 只启动前端，数据接口不可用）。
 
 ## 运行
 

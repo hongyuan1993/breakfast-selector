@@ -13,10 +13,16 @@ export function useBreakfast() {
     setSaveError(null)
     let reg = await getRegisteredBreakfasts()
     const hist = await getHistory()
+    if (reg === null || hist === null) {
+      // 读取失败（网络/服务端配置问题）：不要用预设覆盖已有数据
+      setSaveError('数据加载失败，请稍后刷新重试')
+      setLoading(false)
+      return
+    }
     if (reg.length === 0) {
       reg = BREAKFAST_PRESETS.map(p => ({ ...p, customName: p.name, inStock: true }))
       const ok = await saveRegisteredBreakfasts(reg)
-      if (!ok) setSaveError('数据保存失败，请在 Supabase 中运行 supabase/schema.sql 创建表')
+      if (!ok) setSaveError('数据保存失败，请稍后重试')
     } else {
       const needsMigration = reg.some(r => r.inStock === undefined)
       reg = reg.map(r => ({ ...r, inStock: r.inStock !== false }))
@@ -54,7 +60,7 @@ export function useBreakfast() {
     const next = [...registered, item]
     setRegistered(next)
     const ok = await saveRegisteredBreakfasts(next)
-    if (!ok) setSaveError('保存失败，请检查 Supabase 配置或运行 supabase/schema.sql')
+    if (!ok) setSaveError('保存失败，请稍后重试')
   }, [registered])
 
   const updateBreakfast = useCallback(async (id, updates) => {
@@ -64,7 +70,7 @@ export function useBreakfast() {
     )
     setRegistered(next)
     const ok = await saveRegisteredBreakfasts(next)
-    if (!ok) setSaveError('保存失败，请检查 Supabase 配置')
+    if (!ok) setSaveError('保存失败，请稍后重试')
   }, [registered])
 
   const removeBreakfast = useCallback(async (id) => {
@@ -72,7 +78,7 @@ export function useBreakfast() {
     const next = registered.filter(r => r.id !== id)
     setRegistered(next)
     const ok = await saveRegisteredBreakfasts(next)
-    if (!ok) setSaveError('保存失败，请检查 Supabase 配置')
+    if (!ok) setSaveError('保存失败，请稍后重试')
   }, [registered])
 
   const saveSelection = useCallback(async (items, dateStr, servingTime = '') => {
@@ -84,16 +90,19 @@ export function useBreakfast() {
       createdAt: new Date().toISOString(),
     }
     await addHistoryRecord(record)
-    setHistory(await getHistory())
+    const h = await getHistory()
+    if (h) setHistory(h)
   }, [])
 
   const refreshHistory = useCallback(async () => {
-    setHistory(await getHistory())
+    const h = await getHistory()
+    if (h) setHistory(h)
   }, [])
 
   const cancelOrder = useCallback(async (dateStr) => {
     await removeHistoryRecord(dateStr)
-    setHistory(await getHistory())
+    const h = await getHistory()
+    if (h) setHistory(h)
   }, [])
 
   const updateOrder = useCallback(async (dateStr, items, servingTime) => {
@@ -105,7 +114,8 @@ export function useBreakfast() {
       createdAt: new Date().toISOString(),
     }
     await addHistoryRecord(record)
-    setHistory(await getHistory())
+    const h = await getHistory()
+    if (h) setHistory(h)
   }, [])
 
   return {
